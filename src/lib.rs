@@ -1,6 +1,20 @@
 
 
-//TODO make first and second vec deref to slice
+
+
+
+impl<'a,T> core::ops::Deref for FirstVec<'a,T>{
+    type Target=[T];
+    fn deref(&self)->&Self::Target{
+        self.get_slice()
+    }
+}
+
+impl<'a,T> core::ops::DerefMut for FirstVec<'a,T>{
+    fn deref_mut(&mut self)->&mut Self::Target{
+        self.get_slice_mut()
+    }
+}
 
 pub struct FirstVec<'a,T>{
     foo: &'a mut TwoUnorderedVecs<T>,
@@ -16,6 +30,10 @@ impl<'a,T> RetainMutUnordered<T> for FirstVec<'a,T>{
 
 
 impl<'a,T> FirstVec<'a,T>{
+    #[inline(always)]
+    pub fn get_slice(&self) -> &[T] {
+        &self.foo.inner[..self.foo.first_length]
+    }
     #[inline(always)]
     pub fn get_slice_mut(&mut self) -> &mut [T] {
         &mut self.foo.inner[..self.foo.first_length]
@@ -68,7 +86,25 @@ impl<'a,T> RetainMutUnordered<T> for SecondVec<'a,T>{
     }
 }
 
+impl<'a,T> core::ops::Deref for SecondVec<'a,T>{
+    type Target=[T];
+    fn deref(&self)->&Self::Target{
+        self.get_slice()
+    }
+}
+
+impl<'a,T> core::ops::DerefMut for SecondVec<'a,T>{
+    fn deref_mut(&mut self)->&mut Self::Target{
+        self.get_slice_mut()
+    }
+}
+
+
 impl<'a,T> SecondVec<'a,T>{
+    #[inline(always)]
+    pub fn get_slice(&self) -> &[T] {
+        &self.foo.inner[self.foo.first_length..]
+    }
     #[inline(always)]
     pub fn get_slice_mut(&mut self) -> &mut [T] {
         &mut self.foo.inner[self.foo.first_length..]
@@ -113,10 +149,14 @@ impl<T> TwoUnorderedVecs< T> {
 
 
     #[inline(always)]
-    pub fn get_both_mut(&mut self) -> (&mut [T],&mut [T]) {
+    pub fn get_slice_mut(&mut self) -> (&mut [T],&mut [T]) {
         self.inner.split_at_mut(self.first_length)
     }
 
+    #[inline(always)]
+    pub fn get_slice(&self) -> (&[T],&[T]) {
+        self.inner.split_at(self.first_length)
+    }
 
     
 
@@ -124,6 +164,15 @@ impl<T> TwoUnorderedVecs< T> {
 
 }
 
+
+impl<T> RetainMutUnordered<T> for Vec<T>{
+    fn truncate(&mut self,val:usize){
+        Vec::truncate(self,val);
+    }
+    fn get_slice_mut(&mut self)->&mut [T]{
+        self
+    }
+}
 
 
 pub trait RetainMutUnordered<T> {
@@ -171,11 +220,10 @@ mod test {
         k.second_mut().push(4);
         k.second_mut().push(5);
         k.second_mut().push(6);
-        assert_eq!(k.get_both_mut(),(&mut [0,1,2] as &mut [_],&mut [3,4,5,6] as &mut [_]));
-        
+        slices_tuple_eq(k.get_slice(),(&[0,1,2],&[3,4,5,6]));
+
         k.first_mut().truncate(2);
-        assert_eq!(k.get_both_mut(),(&mut [0,1] as &mut [_],&mut [6,3,4,5] as &mut [_]));
-        
+        slices_tuple_eq(k.get_slice(),(&[0,1],&[6,3,4,5]));
     }
 
     
@@ -189,7 +237,7 @@ mod test {
         k.first_mut().push(4);
         k.second_mut().push(5);
         k.first_mut().truncate(3);
-        assert_eq!(k.get_both_mut(),(&mut [0,1,2] as &mut [_],&mut [5] as &mut [_]));
+        slices_tuple_eq(k.get_slice(),(&[0,1,2],&[5]));
         assert_eq!(k.first_length,3);
         assert_eq!(k.inner.len(),4);
     }
@@ -206,11 +254,9 @@ mod test {
         k.first_mut().push(6);
         k.first_mut().truncate(2);
         k.second_mut().truncate(2);
-        dbg!(k.first_mut().get_slice_mut());
-        dbg!(k.second_mut().get_slice_mut());
         
-        slices_match(k.first_mut().get_slice_mut(), &mut [6, 6]);
-        slices_match(k.second_mut().get_slice_mut(), &mut [5, 5]);
+        slices_match(&k.first_mut(), &[6, 6]);
+        slices_match(&k.second_mut(), &[5, 5]);
     }
     
     //TODO put in module
@@ -225,19 +271,19 @@ mod test {
         k.second_mut().push(8);
         k.first_mut().push(5);
 
-        slices_match(k.first_mut().get_slice_mut(), &mut [9, 3, 6, 5]);
-        slices_match(k.second_mut().get_slice_mut(), &mut [0, 8]);
+        slices_match(&k.first_mut(), &[9, 3, 6, 5]);
+        slices_match(&k.second_mut(), &[0, 8]);
 
         assert_eq!(k.first_length, 4);
 
         k.first_mut().truncate(2);
         k.second_mut().truncate(1);
 
-        slices_match(k.first_mut().get_slice_mut(), &mut [3, 9]);
-        slices_match(k.second_mut().get_slice_mut(), &mut [8]);
+        slices_match(&k.first_mut(), &[3, 9]);
+        slices_match(&k.second_mut(), &[8]);
 
-        assert_eq!(k.first_mut().get_slice_mut().len(), 2);
-        assert_eq!(k.second_mut().get_slice_mut().len(), 1);
+        assert_eq!(k.first_mut().len(), 2);
+        assert_eq!(k.second_mut().len(), 1);
         assert_eq!(k.first_length, 2);
 
         k.first_mut().push(4);
@@ -253,11 +299,16 @@ mod test {
         k.first_mut().retain_mut_unordered(|&mut a| a % 2 == 1);
         k.second_mut().retain_mut_unordered(|&mut a| a % 2 == 0);
 
-        slices_match(k.first_mut().get_slice_mut(), &mut [9, 3, 7]);
-        slices_match(k.second_mut().get_slice_mut(), &mut [8, 2, 4]);
+        slices_match(&k.first_mut(), &[9, 3, 7]);
+        slices_match(&k.second_mut(), &[8, 2, 4]);
     }
     
-
+    fn slices_tuple_eq<T:Eq+core::fmt::Debug>(arr:(&[T],&[T]),arr2:(&[T],&[T])){
+        assert_eq!(arr,arr2);
+    }
+    fn slices_eq<T:Eq+core::fmt::Debug>(arr:&[T],arr2:&[T]){
+        assert_eq!(arr,arr2);
+    }
     fn slices_match<T: Eq>(arr1: &[T], arr2: &[T]) {
         for a in arr2.iter() {
             assert!(arr1.contains(a));
