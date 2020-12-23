@@ -56,6 +56,7 @@ impl<'a,T> FirstVec<'a,T>{
         
         let target_ptr=&mut self.foo.inner[num] as *mut _;
         let source_ptr=unsafe{self.foo.inner.as_mut_ptr().offset( (total_len-diff.min(total_len-self.foo.first_length)) as isize )};
+        //TODO test if destructors are getting called
         unsafe{
             core::ptr::drop_in_place(target_ptr);
             core::ptr::copy(source_ptr,target_ptr,diff);
