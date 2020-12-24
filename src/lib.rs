@@ -4,7 +4,10 @@
 //! Also provides a `retain_mut_unordered` function to both the regular `Vec` as well as
 //! the two "vec-like" vecs provided by this crate.
 
+#![no_std]
 
+extern crate alloc;
+use alloc::vec::Vec;
 
 impl<'a,T> core::ops::Deref for FirstVec<'a,T>{
     type Target=[T];
