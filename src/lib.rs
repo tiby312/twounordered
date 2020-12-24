@@ -150,6 +150,13 @@ pub struct TwoUnorderedVecs<T> {
 
 impl<T> TwoUnorderedVecs< T> {
     #[inline(always)]
+    pub fn with_capacity(num:usize)->Self{
+        TwoUnorderedVecs{
+            inner:Vec::with_capacity(num),
+            first_length:0
+        }
+    }
+    #[inline(always)]
     pub fn new() -> Self {
         TwoUnorderedVecs {
             inner:Vec::new(),
@@ -168,6 +175,23 @@ impl<T> TwoUnorderedVecs< T> {
         SecondVec{foo:self}
     }
 
+
+    #[inline(always)]
+    pub fn clear(&mut self)->&mut Vec<T>{
+        self.first_length=0;
+        self.inner.clear();
+        &mut self.inner
+    }
+
+    #[inline(always)]
+    pub fn into_vec(self)->Vec<T>{
+        self.inner
+    }
+
+    #[inline(always)]
+    pub fn as_vec(&self)->&Vec<T>{
+        &self.inner
+    }
 
     #[inline(always)]
     pub fn as_slice_mut(&mut self) -> (&mut [T],&mut [T]) {
@@ -199,6 +223,7 @@ pub trait RetainMutUnordered<T> {
     fn truncate(&mut self,val:usize);
     fn as_slice_mut(&mut self)->&mut [T];
 
+    #[inline(always)]
     fn retain_mut_unordered<F>(&mut self, mut f: F)
     where
         F: FnMut(&mut T) -> bool{
