@@ -3,7 +3,7 @@ name = "twounordered"
 version = "0.1.0"
 authors = ["Ken <kenakioreed@gmail.com>"]
 edition = "2018"
-readme = "readme.md"
+readme = "README.md"
 license = "MIT"
 keywords = ["vec", "retain","double","doublevec"]
 
