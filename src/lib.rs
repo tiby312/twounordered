@@ -9,41 +9,38 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-impl<'a,T> core::ops::Deref for FirstVec<'a,T>{
-    type Target=[T];
+impl<'a, T> core::ops::Deref for FirstVec<'a, T> {
+    type Target = [T];
 
     #[inline(always)]
-    fn deref(&self)->&Self::Target{
+    fn deref(&self) -> &Self::Target {
         self.as_slice()
     }
 }
 
-impl<'a,T> core::ops::DerefMut for FirstVec<'a,T>{
-
+impl<'a, T> core::ops::DerefMut for FirstVec<'a, T> {
     #[inline(always)]
-    fn deref_mut(&mut self)->&mut Self::Target{
+    fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
     }
 }
 
-pub struct FirstVec<'a,T>{
+pub struct FirstVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
-impl<'a,T> RetainMutUnordered<T> for FirstVec<'a,T>{
-
+impl<'a, T> RetainMutUnordered<T> for FirstVec<'a, T> {
     #[inline(always)]
-    fn truncate(&mut self,num:usize){
-        FirstVec::truncate(self,num);
+    fn truncate(&mut self, num: usize) {
+        FirstVec::truncate(self, num);
     }
 
     #[inline(always)]
-    fn as_slice_mut(&mut self)->&mut [T]{
+    fn as_slice_mut(&mut self) -> &mut [T] {
         FirstVec::as_slice_mut(self)
     }
 }
 
-
-impl<'a,T> FirstVec<'a,T>{
+impl<'a, T> FirstVec<'a, T> {
     #[inline(always)]
     pub fn as_slice(&self) -> &[T] {
         &self.foo.inner[..self.foo.first_length]
@@ -57,21 +54,25 @@ impl<'a,T> FirstVec<'a,T>{
         let total_len = self.foo.inner.len();
 
         //the number to be removed
-        let diff = self.foo.first_length - num ;
+        let diff = self.foo.first_length - num;
 
-        
-        let target_ptr=&mut self.foo.inner[num] as *mut _;
-        let source_ptr=unsafe{self.foo.inner.as_mut_ptr().offset( (total_len-diff.min(total_len-self.foo.first_length)) as isize )};
+        let target_ptr = &mut self.foo.inner[num] as *mut _;
+        let source_ptr = unsafe {
+            self.foo
+                .inner
+                .as_mut_ptr()
+                .offset((total_len - diff.min(total_len - self.foo.first_length)) as isize)
+        };
         //TODO test if destructors are getting called
-        unsafe{
+        unsafe {
             core::ptr::drop_in_place(target_ptr);
-            core::ptr::copy(source_ptr,target_ptr,diff);
+            core::ptr::copy(source_ptr, target_ptr, diff);
         }
 
         self.foo.first_length = num;
 
-        unsafe{
-            self.foo.inner.set_len(total_len-diff);
+        unsafe {
+            self.foo.inner.set_len(total_len - diff);
         }
     }
 
@@ -88,42 +89,38 @@ impl<'a,T> FirstVec<'a,T>{
     }
 }
 
-
-pub struct SecondVec<'a,T>{
+pub struct SecondVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
-impl<'a,T> RetainMutUnordered<T> for SecondVec<'a,T>{
-
+impl<'a, T> RetainMutUnordered<T> for SecondVec<'a, T> {
     #[inline(always)]
-    fn truncate(&mut self,num:usize){
-        SecondVec::truncate(self,num);
+    fn truncate(&mut self, num: usize) {
+        SecondVec::truncate(self, num);
     }
 
     #[inline(always)]
-    fn as_slice_mut(&mut self)->&mut [T]{
+    fn as_slice_mut(&mut self) -> &mut [T] {
         SecondVec::as_slice_mut(self)
     }
 }
 
-impl<'a,T> core::ops::Deref for SecondVec<'a,T>{
-    type Target=[T];
+impl<'a, T> core::ops::Deref for SecondVec<'a, T> {
+    type Target = [T];
 
     #[inline(always)]
-    fn deref(&self)->&Self::Target{
+    fn deref(&self) -> &Self::Target {
         self.as_slice()
     }
 }
 
-impl<'a,T> core::ops::DerefMut for SecondVec<'a,T>{
-
+impl<'a, T> core::ops::DerefMut for SecondVec<'a, T> {
     #[inline(always)]
-    fn deref_mut(&mut self)->&mut Self::Target{
+    fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
     }
 }
 
-
-impl<'a,T> SecondVec<'a,T>{
+impl<'a, T> SecondVec<'a, T> {
     #[inline(always)]
     pub fn as_slice(&self) -> &[T] {
         &self.foo.inner[self.foo.first_length..]
@@ -132,7 +129,7 @@ impl<'a,T> SecondVec<'a,T>{
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         &mut self.foo.inner[self.foo.first_length..]
     }
- 
+
     #[inline(always)]
     pub fn push(&mut self, b: T) {
         self.foo.inner.push(b);
@@ -150,72 +147,68 @@ pub struct TwoUnorderedVecs<T> {
     first_length: usize,
 }
 
-impl<T> TwoUnorderedVecs< T> {
+impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
-    pub fn with_capacity(num:usize)->Self{
-        TwoUnorderedVecs{
-            inner:Vec::with_capacity(num),
-            first_length:0
+    pub fn with_capacity(num: usize) -> Self {
+        TwoUnorderedVecs {
+            inner: Vec::with_capacity(num),
+            first_length: 0,
         }
     }
     #[inline(always)]
     pub fn new() -> Self {
         TwoUnorderedVecs {
-            inner:Vec::new(),
+            inner: Vec::new(),
             first_length: 0,
         }
     }
 
     #[inline(always)]
-    pub fn first(&mut self)->FirstVec<T>{
-        FirstVec{foo:self}
+    pub fn first(&mut self) -> FirstVec<T> {
+        FirstVec { foo: self }
     }
 
-
     #[inline(always)]
-    pub fn second(&mut self)->SecondVec<T>{
-        SecondVec{foo:self}
+    pub fn second(&mut self) -> SecondVec<T> {
+        SecondVec { foo: self }
     }
 
-
     #[inline(always)]
-    pub fn clear(&mut self)->&mut Vec<T>{
-        self.first_length=0;
+    pub fn clear(&mut self) -> &mut Vec<T> {
+        self.first_length = 0;
         self.inner.clear();
         &mut self.inner
     }
 
     #[inline(always)]
-    pub fn into_vec(self)->Vec<T>{
+    pub fn into_vec(self) -> Vec<T> {
         self.inner
     }
 
     #[inline(always)]
-    pub fn as_vec(&self)->&Vec<T>{
+    pub fn as_vec(&self) -> &Vec<T> {
         &self.inner
     }
 
     #[inline(always)]
-    pub fn as_slice_mut(&mut self) -> (&mut [T],&mut [T]) {
+    pub fn as_slice_mut(&mut self) -> (&mut [T], &mut [T]) {
         self.inner.split_at_mut(self.first_length)
     }
 
     #[inline(always)]
-    pub fn as_slice(&self) -> (&[T],&[T]) {
+    pub fn as_slice(&self) -> (&[T], &[T]) {
         self.inner.split_at(self.first_length)
     }
 }
 
-
-impl<T> RetainMutUnordered<T> for Vec<T>{
-
+impl<T> RetainMutUnordered<T> for Vec<T> {
     #[inline(always)]
-    fn truncate(&mut self,val:usize){
-        Vec::truncate(self,val);
+    fn truncate(&mut self, val: usize) {
+        Vec::truncate(self, val);
     }
 
     #[inline(always)]
-    fn as_slice_mut(&mut self)->&mut [T]{
+    fn as_slice_mut(&mut self) -> &mut [T] {
         self
     }
 }
@@ -223,13 +216,14 @@ impl<T> RetainMutUnordered<T> for Vec<T>{
 /// Retain only elements that satisfy the predicate.
 /// May rearrange elements in the process.
 pub trait RetainMutUnordered<T> {
-    fn truncate(&mut self,val:usize);
-    fn as_slice_mut(&mut self)->&mut [T];
+    fn truncate(&mut self, val: usize);
+    fn as_slice_mut(&mut self) -> &mut [T];
 
     #[inline(always)]
     fn retain_mut_unordered<F>(&mut self, mut f: F)
     where
-        F: FnMut(&mut T) -> bool{
+        F: FnMut(&mut T) -> bool,
+    {
         let len = self.as_slice_mut().len();
         let mut del = 0;
         {
@@ -247,11 +241,8 @@ pub trait RetainMutUnordered<T> {
         if del > 0 {
             self.truncate(len - del);
         }
-
     }
 }
-
-
 
 #[cfg(test)]
 mod test {
@@ -259,7 +250,6 @@ mod test {
 
     #[test]
     fn test_truncate() {
-        
         let mut k = TwoUnorderedVecs::new();
         k.first().push(0);
         k.first().push(1);
@@ -268,15 +258,14 @@ mod test {
         k.second().push(4);
         k.second().push(5);
         k.second().push(6);
-        slices_tuple_eq(k.as_slice(),(&[0,1,2],&[3,4,5,6]));
+        slices_tuple_eq(k.as_slice(), (&[0, 1, 2], &[3, 4, 5, 6]));
 
         k.first().truncate(2);
-        slices_tuple_eq(k.as_slice(),(&[0,1],&[6,3,4,5]));
+        slices_tuple_eq(k.as_slice(), (&[0, 1], &[6, 3, 4, 5]));
     }
 
-    
     #[test]
-    fn test_truncate2(){
+    fn test_truncate2() {
         let mut k = TwoUnorderedVecs::new();
         k.first().push(0);
         k.first().push(1);
@@ -285,9 +274,9 @@ mod test {
         k.first().push(4);
         k.second().push(5);
         k.first().truncate(3);
-        slices_tuple_eq(k.as_slice(),(&[0,1,2],&[5]));
-        assert_eq!(k.first_length,3);
-        assert_eq!(k.inner.len(),4);
+        slices_tuple_eq(k.as_slice(), (&[0, 1, 2], &[5]));
+        assert_eq!(k.first_length, 3);
+        assert_eq!(k.inner.len(), 4);
     }
     #[test]
     fn test_other() {
@@ -302,11 +291,11 @@ mod test {
         k.first().push(6);
         k.first().truncate(2);
         k.second().truncate(2);
-        
+
         slices_match(&k.first(), &[6, 6]);
         slices_match(&k.second(), &[5, 5]);
     }
-    
+
     #[test]
     fn test_push() {
         let mut k = TwoUnorderedVecs::new();
@@ -349,9 +338,9 @@ mod test {
         slices_match(&k.first(), &[9, 3, 7]);
         slices_match(&k.second(), &[8, 2, 4]);
     }
-    
-    fn slices_tuple_eq<T:Eq+core::fmt::Debug>(arr:(&[T],&[T]),arr2:(&[T],&[T])){
-        assert_eq!(arr,arr2);
+
+    fn slices_tuple_eq<T: Eq + core::fmt::Debug>(arr: (&[T], &[T]), arr2: (&[T], &[T])) {
+        assert_eq!(arr, arr2);
     }
     fn slices_match<T: Eq>(arr1: &[T], arr2: &[T]) {
         for a in arr2.iter() {
