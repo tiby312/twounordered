@@ -1,4 +1,7 @@
-
+//! A crate that provides the user with two fast "vec-like" vecs that are backed by
+//! a single vec. The caveat is that the operations like push and truncate
+//! may rearrange the order of the other vec in an unspecified way.
+//!
 
 
 
@@ -138,10 +141,6 @@ impl<'a,T> SecondVec<'a,T>{
     }
 }
 
-///Two unordered vecs backed by one vec.
-///Pushing and retaining from the first cec,
-///can change the ordering of the second vec.
-///Assume both vecs ordering can change at any time.
 #[derive(Debug)]
 pub struct TwoUnorderedVecs<T> {
     inner: Vec<T>,
