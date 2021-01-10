@@ -141,6 +141,13 @@ impl<'a, T> SecondVec<'a, T> {
     }
 }
 
+
+impl<T> From<TwoUnorderedVecs<T>> for Vec<T>{
+    #[inline(always)]
+    fn from(a:TwoUnorderedVecs<T>)->Vec<T>{
+        a.inner
+    }
+}
 #[derive(Debug)]
 pub struct TwoUnorderedVecs<T> {
     inner: Vec<T>,
@@ -173,11 +180,20 @@ impl<T> TwoUnorderedVecs<T> {
         SecondVec { foo: self }
     }
 
+    ///Clear the vec, and expose the underlying vec to the user to use
+    ///After the closure is executed, the vec is cleared again in case
+    ///the user modified it.
     #[inline(always)]
-    pub fn clear(&mut self) -> &mut Vec<T> {
+    pub fn clear_and_as_vec(&mut self,func:impl FnOnce(&mut Vec<T>)){
+        self.inner.clear();
+        func(&mut self.inner);
+        self.inner.clear();
+    }
+
+    #[inline(always)]
+    pub fn clear(&mut self) {
         self.first_length = 0;
         self.inner.clear();
-        &mut self.inner
     }
 
     #[inline(always)]
