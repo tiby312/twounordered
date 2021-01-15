@@ -154,16 +154,6 @@ pub struct TwoUnorderedVecs<T> {
     first_length: usize,
 }
 
-pub struct BorrowedVec<'a,T>{
-    pub inner:&'a mut Vec<T>
-}
-
-impl<'a,T> Drop for BorrowedVec<'a,T>{
-    fn drop(&mut self){
-        assert!(self.inner.is_empty());
-    }
-}
-
 
 impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
@@ -191,18 +181,13 @@ impl<T> TwoUnorderedVecs<T> {
         SecondVec { foo: self }
     }
 
-    ///Panics if both vects are not empty.
-    ///Returns a handle to the underlying vec
-    ///that the user can use.
-    ///panics if the vec isnt empty when the user is
-    ///done using it.
-    pub fn as_vec_mut(&mut self)->BorrowedVec<T>{
+    ///Panics if both vects are not empty before and after the user
+    ///function is called.
+    pub fn as_vec_mut(&mut self,func:impl FnOnce(&mut Vec<T>)){
         assert!(self.inner.is_empty());
-        BorrowedVec{
-            inner:&mut self.inner
-        }
+        func(&mut self.inner);
+        assert!(self.inner.is_empty());
     }
-
 
     #[inline(always)]
     pub fn clear(&mut self) {
@@ -281,11 +266,12 @@ mod test {
     fn test_foo(){
         let mut k = TwoUnorderedVecs::new();
         
-        {
-            let v=k.as_vec_mut();
-            v.inner.push(0);
-            v.inner.clear();
-        }
+        
+        k.as_vec_mut(|a|{
+            a.push(0);
+            a.clear();
+        })
+    
     }
     use super::*;
 
