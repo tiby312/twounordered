@@ -154,6 +154,17 @@ pub struct TwoUnorderedVecs<T> {
     first_length: usize,
 }
 
+pub struct BorrowedVec<'a,T>{
+    pub inner:&'a mut Vec<T>
+}
+
+impl<'a,T> Drop for BorrowedVec<'a,T>{
+    fn drop(&mut self){
+        assert!(self.inner.is_empty());
+    }
+}
+
+
 impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
     pub fn with_capacity(num: usize) -> Self {
@@ -180,15 +191,18 @@ impl<T> TwoUnorderedVecs<T> {
         SecondVec { foo: self }
     }
 
-    ///Clear the vec, and expose the underlying vec to the user to use
-    ///After the closure is executed, the vec is cleared again in case
-    ///the user modified it.
-    #[inline(always)]
-    pub fn clear_and_as_vec(&mut self,func:impl FnOnce(&mut Vec<T>)){
-        self.inner.clear();
-        func(&mut self.inner);
-        self.inner.clear();
+    ///Panics if both vects are not empty.
+    ///Returns a handle to the underlying vec
+    ///that the user can use.
+    ///panics if the vec isnt empty when the user is
+    ///done using it.
+    pub fn as_vec_mut(&mut self)->BorrowedVec<T>{
+        assert!(self.inner.is_empty());
+        BorrowedVec{
+            inner:&mut self.inner
+        }
     }
+
 
     #[inline(always)]
     pub fn clear(&mut self) {
@@ -262,6 +276,17 @@ pub trait RetainMutUnordered<T> {
 
 #[cfg(test)]
 mod test {
+
+    #[test]
+    fn test_foo(){
+        let mut k = TwoUnorderedVecs::new();
+        
+        {
+            let v=k.as_vec_mut();
+            v.inner.push(0);
+            v.inner.clear();
+        }
+    }
     use super::*;
 
     #[test]
