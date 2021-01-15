@@ -205,20 +205,17 @@ impl<T> TwoUnorderedVecs<T> {
     }
 
     ///Uses the specified vec as the underlying vec.
-    ///The original vec is dropped.
+    ///The original vec is returned.
     ///The first vec is set to the size of the specified vec.
     ///The second vec will be empty.
     #[inline(always)]
-    pub fn insert_vec(&mut self,mut a:Vec<T>){
+    pub fn replace_inner(&mut self,mut a:Vec<T>)->(Vec<T>,usize){
+        let curr_len=self.first_length;
         self.first_length=a.len();
         core::mem::swap(&mut a,&mut self.inner);
+        (a,curr_len)
     }
-    #[inline(always)]
-    pub fn extract_vec(&mut self) -> Vec<T> {
-        let mut v=Vec::new();
-        core::mem::swap(&mut v,&mut self.inner);
-        v
-    }
+    
 
 
     #[inline(always)]
