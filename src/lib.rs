@@ -171,6 +171,18 @@ impl<T> TwoUnorderedVecs<T> {
         }
     }
 
+    ///The first vec will have all the elements of
+    ///the specified vec.
+    ///The second vec will be empty.
+    #[inline(always)]
+    pub fn from_vec(inner:Vec<T>)->Self{
+        let first_length=inner.len();
+        TwoUnorderedVecs {
+            inner,
+            first_length,
+        }
+    }
+
     #[inline(always)]
     pub fn first(&mut self) -> FirstVec<T> {
         FirstVec { foo: self }
@@ -179,14 +191,6 @@ impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
     pub fn second(&mut self) -> SecondVec<T> {
         SecondVec { foo: self }
-    }
-
-    ///Panics if both vects are not empty before and after the user
-    ///function is called.
-    pub fn as_vec_mut(&mut self,func:impl FnOnce(&mut Vec<T>)){
-        assert!(self.inner.is_empty());
-        func(&mut self.inner);
-        assert!(self.inner.is_empty());
     }
 
     #[inline(always)]
@@ -199,6 +203,23 @@ impl<T> TwoUnorderedVecs<T> {
     pub fn into_vec(self) -> Vec<T> {
         self.inner
     }
+
+    ///Uses the specified vec as the underlying vec.
+    ///The original vec is dropped.
+    ///The first vec is set to the size of the specified vec.
+    ///The second vec will be empty.
+    #[inline(always)]
+    pub fn insert_vec(&mut self,mut a:Vec<T>){
+        self.first_length=a.len();
+        core::mem::swap(&mut a,&mut self.inner);
+    }
+    #[inline(always)]
+    pub fn extract_vec(&mut self) -> Vec<T> {
+        let mut v=Vec::new();
+        core::mem::swap(&mut v,&mut self.inner);
+        v
+    }
+
 
     #[inline(always)]
     pub fn as_vec(&self) -> &Vec<T> {
@@ -214,6 +235,26 @@ impl<T> TwoUnorderedVecs<T> {
     pub fn as_slice(&self) -> (&[T], &[T]) {
         self.inner.split_at(self.first_length)
     }
+
+    ///Cast this container into another provided `X` has the same
+    ///size and alignment as `T`. Panics if they do not.
+    pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<X>{
+        assert_eq!(core::mem::size_of::<X>(),core::mem::size_of::<T>());
+        assert_eq!(core::mem::align_of::<X>(),core::mem::align_of::<T>());
+        
+        let ptr=self.inner.as_mut_ptr();
+        let len=self.inner.len();
+        let cap=self.inner.capacity();
+        let first_length=self.first_length;
+        core::mem::forget(self);
+        let inner=Vec::from_raw_parts(ptr as *mut _,len,cap);
+
+        TwoUnorderedVecs{
+            inner,
+            first_length
+        }
+    }
+
 }
 
 impl<T> RetainMutUnordered<T> for Vec<T> {
@@ -262,11 +303,12 @@ pub trait RetainMutUnordered<T> {
 #[cfg(test)]
 mod test {
 
+    //TODO extract/insert functions
+
     #[test]
     fn test_foo(){
         let mut k = TwoUnorderedVecs::new();
-        
-        
+            
         k.as_vec_mut(|a|{
             a.push(0);
             a.clear();
