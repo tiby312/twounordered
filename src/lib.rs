@@ -46,8 +46,6 @@ impl<'a, T> FirstVec<'a, T> {
     pub fn truncate(&mut self, num: usize) {
         let first_length = self.foo.first_length;
 
-        //If user tries to truncate more elements than are in the slice,
-        //just assume they want to truncate everything.
         let num = if num > first_length {
             first_length
         } else {
