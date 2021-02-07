@@ -301,15 +301,57 @@ pub trait RetainMutUnordered<T> {
 mod test {
 
     //TODO extract/insert functions
+    #[test]
+    fn test_x(){
+        let mut k=TwoUnorderedVecs::new();
+        for _ in 0u64..1000{
+            k.second().push(4);
+        }
+        for _ in 0u64..1000{
+            k.first().push(10);
+        }
 
+        let mut flip=false;
+        k.first().retain_mut_unordered(|a|{
+            *a+=3;
+            flip=!flip;
+            flip
+        });
+        flip=false;
+        k.second().retain_mut_unordered(|a|{
+            *a+=3;
+            flip=!flip;
+            flip
+        });
+        assert_eq!(k.first().len(),500);
+        assert_eq!(k.second().len(),500);
+        for a in k.first().iter(){
+            assert_eq!(*a,13);
+        }
+        for a in k.second().iter(){
+            assert_eq!(*a,7);
+        }
+    }
     #[test]
     fn test_foo(){
-        let mut k = TwoUnorderedVecs::new();
             
-        k.as_vec_mut(|a|{
-            a.push(0);
-            a.clear();
-        })
+        let mut k=TwoUnorderedVecs::new();
+        k.first().push(0);
+        k.first().push(1);
+        k.first().push(2);
+
+        let (inner,m)=k.replace_inner(Vec::new());
+        assert_eq!(m,3);
+        assert_eq!(inner.len(),3);
+
+        let (inner,m)=k.replace_inner(inner);
+        assert_eq!(m,0);
+        assert_eq!(inner.len(),0);
+        assert_eq!(inner.capacity(),0);
+
+        assert_eq!(k.first().len(),3);
+        assert_eq!(k.second().len(),0);
+        
     
     }
     use super::*;
@@ -403,6 +445,12 @@ mod test {
 
         slices_match(&k.first(), &[9, 3, 7]);
         slices_match(&k.second(), &[8, 2, 4]);
+
+
+        k.second().push(7);
+        k.second().push(3);
+        k.second().push(2);
+        k.second().push(4);
     }
 
     fn slices_tuple_eq<T: Eq + core::fmt::Debug>(arr: (&[T], &[T]), arr2: (&[T], &[T])) {
