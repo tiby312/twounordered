@@ -41,42 +41,37 @@ impl<'a, T> RetainMutUnordered<T> for FirstVec<'a, T> {
     }
 }
 
-
 impl<'a, T> FirstVec<'a, T> {
     #[inline(always)]
     pub fn truncate(&mut self, num: usize) {
-        let first_length=self.foo.first_length;
-
+        let first_length = self.foo.first_length;
 
         //If user tries to truncate more elements than are in the slice,
         //just assume they want to truncate everything.
-        let num=if num>first_length{
+        let num = if num > first_length {
             first_length
-        }else{
+        } else {
             num
         };
-        
-        
-        let diff=first_length-num;
 
-        
-        let total_len=self.foo.inner.len();
+        let diff = first_length - num;
 
-        let (_keep,rest)=self.foo.inner.split_at_mut(num);
-        let (slice_to_remove,rest)=rest.split_at_mut(diff);
-        
-        if rest.len()>slice_to_remove.len(){
-            let (_rest,slice_to_move)=rest.split_at_mut(rest.len()-slice_to_remove.len());
+        let total_len = self.foo.inner.len();
+
+        let (_keep, rest) = self.foo.inner.split_at_mut(num);
+        let (slice_to_remove, rest) = rest.split_at_mut(diff);
+
+        if rest.len() > slice_to_remove.len() {
+            let (_rest, slice_to_move) = rest.split_at_mut(rest.len() - slice_to_remove.len());
             slice_to_remove.swap_with_slice(slice_to_move);
-        }else{
-            let (slice_to_move,_dont_bother_moving)=slice_to_remove.split_at_mut(rest.len());
-            slice_to_move.swap_with_slice(rest);    
+        } else {
+            let (slice_to_move, _dont_bother_moving) = slice_to_remove.split_at_mut(rest.len());
+            slice_to_move.swap_with_slice(rest);
         }
-        
-        
-        self.foo.inner.truncate(total_len-diff);
-        
-        self.foo.first_length=num;
+
+        self.foo.inner.truncate(total_len - diff);
+
+        self.foo.first_length = num;
     }
 
     #[inline(always)]
@@ -87,8 +82,8 @@ impl<'a, T> FirstVec<'a, T> {
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         &mut self.foo.inner[..self.foo.first_length]
     }
-    
-        #[inline(always)]
+
+    #[inline(always)]
     pub fn push(&mut self, a: T) {
         let total_len = self.foo.inner.len();
 
@@ -100,7 +95,6 @@ impl<'a, T> FirstVec<'a, T> {
         self.foo.first_length += 1;
     }
 }
-
 
 #[derive(Debug)]
 pub struct SecondVec<'a, T> {
@@ -155,10 +149,9 @@ impl<'a, T> SecondVec<'a, T> {
     }
 }
 
-
-impl<T> From<TwoUnorderedVecs<T>> for Vec<T>{
+impl<T> From<TwoUnorderedVecs<T>> for Vec<T> {
     #[inline(always)]
-    fn from(a:TwoUnorderedVecs<T>)->Vec<T>{
+    fn from(a: TwoUnorderedVecs<T>) -> Vec<T> {
         a.inner
     }
 }
@@ -167,7 +160,6 @@ pub struct TwoUnorderedVecs<T> {
     inner: Vec<T>,
     first_length: usize,
 }
-
 
 impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
@@ -189,8 +181,8 @@ impl<T> TwoUnorderedVecs<T> {
     ///the specified vec.
     ///The second vec will be empty.
     #[inline(always)]
-    pub fn from_vec(inner:Vec<T>)->Self{
-        let first_length=inner.len();
+    pub fn from_vec(inner: Vec<T>) -> Self {
+        let first_length = inner.len();
         TwoUnorderedVecs {
             inner,
             first_length,
@@ -223,14 +215,12 @@ impl<T> TwoUnorderedVecs<T> {
     ///The first vec is set to the size of the specified vec.
     ///The second vec will be empty.
     #[inline(always)]
-    pub fn replace_inner(&mut self,mut a:Vec<T>)->(Vec<T>,usize){
-        let curr_len=self.first_length;
-        self.first_length=a.len();
-        core::mem::swap(&mut a,&mut self.inner);
-        (a,curr_len)
+    pub fn replace_inner(&mut self, mut a: Vec<T>) -> (Vec<T>, usize) {
+        let curr_len = self.first_length;
+        self.first_length = a.len();
+        core::mem::swap(&mut a, &mut self.inner);
+        (a, curr_len)
     }
-    
-
 
     #[inline(always)]
     pub fn as_vec(&self) -> &Vec<T> {
@@ -249,23 +239,22 @@ impl<T> TwoUnorderedVecs<T> {
 
     ///Cast this container into another provided `X` has the same
     ///size and alignment as `T`. Panics if they do not.
-    pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<X>{
-        assert_eq!(core::mem::size_of::<X>(),core::mem::size_of::<T>());
-        assert_eq!(core::mem::align_of::<X>(),core::mem::align_of::<T>());
-        
-        let ptr=self.inner.as_mut_ptr();
-        let len=self.inner.len();
-        let cap=self.inner.capacity();
-        let first_length=self.first_length;
-        core::mem::forget(self);
-        let inner=Vec::from_raw_parts(ptr as *mut _,len,cap);
+    pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<X> {
+        assert_eq!(core::mem::size_of::<X>(), core::mem::size_of::<T>());
+        assert_eq!(core::mem::align_of::<X>(), core::mem::align_of::<T>());
 
-        TwoUnorderedVecs{
+        let ptr = self.inner.as_mut_ptr();
+        let len = self.inner.len();
+        let cap = self.inner.capacity();
+        let first_length = self.first_length;
+        core::mem::forget(self);
+        let inner = Vec::from_raw_parts(ptr as *mut _, len, cap);
+
+        TwoUnorderedVecs {
             inner,
-            first_length
+            first_length,
         }
     }
-
 }
 
 impl<T> RetainMutUnordered<T> for Vec<T> {
@@ -311,84 +300,79 @@ pub trait RetainMutUnordered<T> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
 
     //TODO extract/insert functions
     #[test]
-    fn test_x(){
-        let mut k=TwoUnorderedVecs::new();
-        for _ in 0u64..1000{
+    fn test_x() {
+        let mut k = TwoUnorderedVecs::new();
+        for _ in 0u64..1000 {
             k.second().push(4);
         }
-        for _ in 0u64..1000{
+        for _ in 0u64..1000 {
             k.first().push(10);
         }
 
-        let mut flip=false;
-        k.first().retain_mut_unordered(|a|{
-            *a+=3;
-            flip=!flip;
+        let mut flip = false;
+        k.first().retain_mut_unordered(|a| {
+            *a += 3;
+            flip = !flip;
             flip
         });
-        flip=false;
-        k.second().retain_mut_unordered(|a|{
-            *a+=3;
-            flip=!flip;
+        flip = false;
+        k.second().retain_mut_unordered(|a| {
+            *a += 3;
+            flip = !flip;
             flip
         });
-        assert_eq!(k.first().len(),500);
-        assert_eq!(k.second().len(),500);
-        for a in k.first().iter(){
-            assert_eq!(*a,13);
+        assert_eq!(k.first().len(), 500);
+        assert_eq!(k.second().len(), 500);
+        for a in k.first().iter() {
+            assert_eq!(*a, 13);
         }
-        for a in k.second().iter(){
-            assert_eq!(*a,7);
+        for a in k.second().iter() {
+            assert_eq!(*a, 7);
         }
     }
     #[test]
-    fn test_foo(){
-            
-        let mut k=TwoUnorderedVecs::new();
+    fn test_foo() {
+        let mut k = TwoUnorderedVecs::new();
         k.first().push(0);
         k.first().push(1);
         k.first().push(2);
 
-        let (inner,m)=k.replace_inner(Vec::new());
-        assert_eq!(m,3);
-        assert_eq!(inner.len(),3);
+        let (inner, m) = k.replace_inner(Vec::new());
+        assert_eq!(m, 3);
+        assert_eq!(inner.len(), 3);
 
-        let (inner,m)=k.replace_inner(inner);
-        assert_eq!(m,0);
-        assert_eq!(inner.len(),0);
-        assert_eq!(inner.capacity(),0);
+        let (inner, m) = k.replace_inner(inner);
+        assert_eq!(m, 0);
+        assert_eq!(inner.len(), 0);
+        assert_eq!(inner.capacity(), 0);
 
-        assert_eq!(k.first().len(),3);
-        assert_eq!(k.second().len(),0);
-        
-    
+        assert_eq!(k.first().len(), 3);
+        assert_eq!(k.second().len(), 0);
     }
     use super::*;
 
     #[test]
-    fn test_truncate_zero(){
-        let mut k:TwoUnorderedVecs<u32>=TwoUnorderedVecs::new();
-        
+    fn test_truncate_zero() {
+        let mut k: TwoUnorderedVecs<u32> = TwoUnorderedVecs::new();
 
         k.first().push(5);
         k.first().push(5);
         k.first().truncate(3);
-        assert_eq!(k.first().len(),2);
-        assert_eq!(k.second().len(),0);
+        assert_eq!(k.first().len(), 2);
+        assert_eq!(k.second().len(), 0);
         k.clear();
 
         k.second().push(4);
         k.second().push(4);
         k.first().truncate(4);
-        assert_eq!(k.first().len(),0);
-        assert_eq!(k.second().len(),2);
-        
+        assert_eq!(k.first().len(), 0);
+        assert_eq!(k.second().len(), 2);
+
         k.clear();
 
         k.first().push(5);
@@ -397,12 +381,8 @@ mod test {
         k.second().push(8);
         k.first().truncate(2);
         k.second().truncate(2);
-        assert_eq!(k.first().len(),2);
-        assert_eq!(k.second().len(),2);
-        
-
-        
-
+        assert_eq!(k.first().len(), 2);
+        assert_eq!(k.second().len(), 2);
     }
     #[test]
     fn test_truncate() {
@@ -429,9 +409,9 @@ mod test {
         k.first().push(3);
         k.first().push(4);
         k.second().push(5);
-        
+
         k.first().truncate(3);
-        
+
         slices_tuple_eq(k.as_slice(), (&[0, 1, 2], &[5]));
         assert_eq!(k.first_length, 3);
         assert_eq!(k.inner.len(), 4);
@@ -446,14 +426,12 @@ mod test {
         k.first().push(3);
         k.second().push(4);
 
-        
         k.first().truncate(2);
-        
+
         k.second().truncate(2);
 
         slices_match(&k.first(), &[0, 1]);
-        slices_match(&k.second(), &[ 4]);
-        
+        slices_match(&k.second(), &[4]);
     }
 
     #[test]
@@ -467,9 +445,9 @@ mod test {
         k.first().push(5);
         k.second().push(6);
         k.first().push(5);
-        
+
         k.first().truncate(2);
-        
+
         k.second().truncate(2);
 
         slices_match(&k.first(), &[5, 5]);
@@ -517,7 +495,6 @@ mod test {
 
         slices_match(&k.first(), &[9, 3, 7]);
         slices_match(&k.second(), &[8, 2, 4]);
-
 
         k.second().push(7);
         k.second().push(3);
