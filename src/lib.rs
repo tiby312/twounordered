@@ -51,29 +51,27 @@ impl<'a, T> FirstVec<'a, T> {
     }
     #[inline(always)]
     pub fn truncate(&mut self, num: usize) {
-        let total_len = self.foo.inner.len();
+        let first_length=self.foo.first_length;
 
-        //the number to be removed
-        let diff = self.foo.first_length - num;
-
-        let target_ptr = &mut self.foo.inner[num] as *mut _;
-        let source_ptr = unsafe {
-            self.foo
-                .inner
-                .as_mut_ptr()
-                .offset((total_len - diff.min(total_len - self.foo.first_length)) as isize)
+        let num=if num>first_length{
+            first_length
+        }else{
+            num
         };
-        //TODO test if destructors are getting called
-        unsafe {
-            core::ptr::drop_in_place(target_ptr);
-            core::ptr::copy(source_ptr, target_ptr, diff);
-        }
 
-        self.foo.first_length = num;
+        let diff=first_length-num;
 
-        unsafe {
-            self.foo.inner.set_len(total_len - diff);
+
+        let total_len=self.foo.inner.len();
+
+        
+        for i in 1..diff+1{
+            self.foo.inner.swap(first_length-i,total_len-i);
         }
+        
+        self.foo.inner.truncate(total_len-diff);
+        
+        self.foo.first_length=num;
     }
 
     #[inline(always)]
@@ -356,6 +354,13 @@ mod test {
     }
     use super::*;
 
+    #[test]
+    fn test_truncate_zero(){
+        let mut k:TwoUnorderedVecs<u32>=TwoUnorderedVecs::new();
+        k.first().truncate(4);
+        k.second().truncate(4);
+
+    }
     #[test]
     fn test_truncate() {
         let mut k = TwoUnorderedVecs::new();
