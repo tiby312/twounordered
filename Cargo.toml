@@ -1,6 +1,6 @@
 [package]
 name = "twounordered"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Ken <kenakioreed@gmail.com>"]
 edition = "2018"
 description = "Provides two vec-like vecs backed by a single vec and provides retain_mut_unordered()"
