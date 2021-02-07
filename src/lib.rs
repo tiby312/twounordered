@@ -161,6 +161,12 @@ pub struct TwoUnorderedVecs<T> {
     first_length: usize,
 }
 
+impl<T> Default for TwoUnorderedVecs<T>{
+    #[inline(always)]
+    fn default()->Self{
+        TwoUnorderedVecs::new()
+    }
+}
 impl<T> TwoUnorderedVecs<T> {
     #[inline(always)]
     pub fn with_capacity(num: usize) -> Self {
@@ -239,6 +245,12 @@ impl<T> TwoUnorderedVecs<T> {
 
     ///Cast this container into another provided `X` has the same
     ///size and alignment as `T`. Panics if they do not.
+    ///
+    /// ### Unsafety
+    ///
+    /// The destructors of T won't get called, and X may
+    /// not be properly initialized. 
+    ///
     pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<X> {
         assert_eq!(core::mem::size_of::<X>(), core::mem::size_of::<T>());
         assert_eq!(core::mem::align_of::<X>(), core::mem::align_of::<T>());
