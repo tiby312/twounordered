@@ -25,6 +25,7 @@ impl<'a, T> core::ops::DerefMut for FirstVec<'a, T> {
     }
 }
 
+#[derive(Debug)]
 pub struct FirstVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
@@ -40,7 +41,44 @@ impl<'a, T> RetainMutUnordered<T> for FirstVec<'a, T> {
     }
 }
 
+
 impl<'a, T> FirstVec<'a, T> {
+    #[inline(always)]
+    pub fn truncate(&mut self, num: usize) {
+        let first_length=self.foo.first_length;
+
+
+        //If user tries to truncate more elements than are in the slice,
+        //just assume they want to truncate everything.
+        let num=if num>first_length{
+            first_length
+        }else{
+            num
+        };
+        
+        
+        let diff=first_length-num;
+
+        
+        let total_len=self.foo.inner.len();
+
+        let (_keep,rest)=self.foo.inner.split_at_mut(num);
+        let (slice_to_remove,rest)=rest.split_at_mut(diff);
+        
+        if rest.len()>slice_to_remove.len(){
+            let (_rest,slice_to_move)=rest.split_at_mut(rest.len()-slice_to_remove.len());
+            slice_to_remove.swap_with_slice(slice_to_move);
+        }else{
+            let (slice_to_move,_dont_bother_moving)=slice_to_remove.split_at_mut(rest.len());
+            slice_to_move.swap_with_slice(rest);    
+        }
+        
+        
+        self.foo.inner.truncate(total_len-diff);
+        
+        self.foo.first_length=num;
+    }
+
     #[inline(always)]
     pub fn as_slice(&self) -> &[T] {
         &self.foo.inner[..self.foo.first_length]
@@ -49,32 +87,8 @@ impl<'a, T> FirstVec<'a, T> {
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         &mut self.foo.inner[..self.foo.first_length]
     }
-    #[inline(always)]
-    pub fn truncate(&mut self, num: usize) {
-        let first_length=self.foo.first_length;
-
-        let num=if num>first_length{
-            first_length
-        }else{
-            num
-        };
-
-        let diff=first_length-num;
-
-
-        let total_len=self.foo.inner.len();
-
-        
-        for i in 1..diff+1{
-            self.foo.inner.swap(first_length-i,total_len-i);
-        }
-        
-        self.foo.inner.truncate(total_len-diff);
-        
-        self.foo.first_length=num;
-    }
-
-    #[inline(always)]
+    
+        #[inline(always)]
     pub fn push(&mut self, a: T) {
         let total_len = self.foo.inner.len();
 
@@ -87,6 +101,8 @@ impl<'a, T> FirstVec<'a, T> {
     }
 }
 
+
+#[derive(Debug)]
 pub struct SecondVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
@@ -295,6 +311,7 @@ pub trait RetainMutUnordered<T> {
     }
 }
 
+
 #[cfg(test)]
 mod test {
 
@@ -357,8 +374,34 @@ mod test {
     #[test]
     fn test_truncate_zero(){
         let mut k:TwoUnorderedVecs<u32>=TwoUnorderedVecs::new();
+        
+
+        k.first().push(5);
+        k.first().push(5);
+        k.first().truncate(3);
+        assert_eq!(k.first().len(),2);
+        assert_eq!(k.second().len(),0);
+        k.clear();
+
+        k.second().push(4);
+        k.second().push(4);
         k.first().truncate(4);
-        k.second().truncate(4);
+        assert_eq!(k.first().len(),0);
+        assert_eq!(k.second().len(),2);
+        
+        k.clear();
+
+        k.first().push(5);
+        k.first().push(6);
+        k.second().push(7);
+        k.second().push(8);
+        k.first().truncate(2);
+        k.second().truncate(2);
+        assert_eq!(k.first().len(),2);
+        assert_eq!(k.second().len(),2);
+        
+
+        
 
     }
     #[test]
@@ -386,27 +429,51 @@ mod test {
         k.first().push(3);
         k.first().push(4);
         k.second().push(5);
+        
         k.first().truncate(3);
+        
         slices_tuple_eq(k.as_slice(), (&[0, 1, 2], &[5]));
         assert_eq!(k.first_length, 3);
         assert_eq!(k.inner.len(), 4);
     }
+
+    #[test]
+    fn test_trunk() {
+        let mut k = TwoUnorderedVecs::new();
+        k.first().push(0);
+        k.first().push(1);
+        k.first().push(2);
+        k.first().push(3);
+        k.second().push(4);
+
+        
+        k.first().truncate(2);
+        
+        k.second().truncate(2);
+
+        slices_match(&k.first(), &[0, 1]);
+        slices_match(&k.second(), &[ 4]);
+        
+    }
+
     #[test]
     fn test_other() {
         let mut k = TwoUnorderedVecs::new();
-        k.second().push(5);
-        k.first().push(6);
-        k.second().push(5);
-        k.first().push(6);
-        k.second().push(5);
-        k.first().push(6);
-        k.second().push(5);
-        k.first().push(6);
+        k.second().push(6);
+        k.first().push(5);
+        k.second().push(6);
+        k.first().push(5);
+        k.second().push(6);
+        k.first().push(5);
+        k.second().push(6);
+        k.first().push(5);
+        
         k.first().truncate(2);
+        
         k.second().truncate(2);
 
-        slices_match(&k.first(), &[6, 6]);
-        slices_match(&k.second(), &[5, 5]);
+        slices_match(&k.first(), &[5, 5]);
+        slices_match(&k.second(), &[6, 6]);
     }
 
     #[test]
