@@ -313,7 +313,6 @@ pub trait RetainMutUnordered<T> {
 #[cfg(test)]
 mod test {
 
-    //TODO extract/insert functions
     #[test]
     fn test_x() {
         let mut k = TwoUnorderedVecs::new();

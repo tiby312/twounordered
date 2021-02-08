@@ -1,6 +1,6 @@
 [package]
 name = "twounordered"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Ken <kenakioreed@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/tiby312/twounordered"
