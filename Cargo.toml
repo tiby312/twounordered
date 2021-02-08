@@ -3,6 +3,7 @@ name = "twounordered"
 version = "0.6.2"
 authors = ["Ken <kenakioreed@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/tiby312/twounordered"
 description = "Provides two vec-like vecs backed by a single vec and provides retain_mut_unordered()"
 readme = "README.md"
 license = "MIT"
