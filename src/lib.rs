@@ -9,8 +9,8 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-impl<'a, T> core::ops::Deref for FirstVec<'a, T> {
-    type Target = [T];
+impl<'a, T: VecTrait> core::ops::Deref for FirstVec<'a, T> {
+    type Target = [T::T];
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
@@ -18,7 +18,7 @@ impl<'a, T> core::ops::Deref for FirstVec<'a, T> {
     }
 }
 
-impl<'a, T> core::ops::DerefMut for FirstVec<'a, T> {
+impl<'a, T: VecTrait> core::ops::DerefMut for FirstVec<'a, T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
@@ -29,19 +29,19 @@ impl<'a, T> core::ops::DerefMut for FirstVec<'a, T> {
 pub struct FirstVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
-impl<'a, T> RetainMutUnordered<T> for FirstVec<'a, T> {
+impl<'a, T: VecTrait> RetainMutUnordered<T::T> for FirstVec<'a, T> {
     #[inline(always)]
     fn truncate(&mut self, num: usize) {
         FirstVec::truncate(self, num);
     }
 
     #[inline(always)]
-    fn as_slice_mut(&mut self) -> &mut [T] {
+    fn as_slice_mut(&mut self) -> &mut [T::T] {
         FirstVec::as_slice_mut(self)
     }
 }
 
-impl<'a, T> FirstVec<'a, T> {
+impl<'a, T: VecTrait> FirstVec<'a, T> {
     #[inline(always)]
     pub fn truncate(&mut self, num: usize) {
         let first_length = self.foo.first_length;
@@ -54,9 +54,9 @@ impl<'a, T> FirstVec<'a, T> {
 
         let diff = first_length - num;
 
-        let total_len = self.foo.inner.len();
+        let total_len = self.foo.inner.borrow().len();
 
-        let (_keep, rest) = self.foo.inner.split_at_mut(num);
+        let (_keep, rest) = self.foo.inner.borrow_mut().split_at_mut(num);
         let (slice_to_remove, rest) = rest.split_at_mut(diff);
 
         if rest.len() > slice_to_remove.len() {
@@ -67,28 +67,31 @@ impl<'a, T> FirstVec<'a, T> {
             slice_to_move.swap_with_slice(rest);
         }
 
-        self.foo.inner.truncate(total_len - diff);
+        self.foo.inner.borrow_mut().truncate(total_len - diff);
 
         self.foo.first_length = num;
     }
 
     #[inline(always)]
-    pub fn as_slice(&self) -> &[T] {
-        &self.foo.inner[..self.foo.first_length]
+    pub fn as_slice(&self) -> &[T::T] {
+        &self.foo.inner.borrow()[..self.foo.first_length]
     }
     #[inline(always)]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
-        &mut self.foo.inner[..self.foo.first_length]
+    pub fn as_slice_mut(&mut self) -> &mut [T::T] {
+        &mut self.foo.inner.borrow_mut()[..self.foo.first_length]
     }
 
     #[inline(always)]
-    pub fn push(&mut self, a: T) {
-        let total_len = self.foo.inner.len();
+    pub fn push(&mut self, a: T::T) {
+        let total_len = self.foo.inner.borrow().len();
 
-        self.foo.inner.push(a);
+        self.foo.inner.borrow_mut().push(a);
 
         //now len is actually one less than current length.
-        self.foo.inner.swap(self.foo.first_length, total_len);
+        self.foo
+            .inner
+            .borrow_mut()
+            .swap(self.foo.first_length, total_len);
 
         self.foo.first_length += 1;
     }
@@ -98,20 +101,20 @@ impl<'a, T> FirstVec<'a, T> {
 pub struct SecondVec<'a, T> {
     foo: &'a mut TwoUnorderedVecs<T>,
 }
-impl<'a, T> RetainMutUnordered<T> for SecondVec<'a, T> {
+impl<'a, T: VecTrait> RetainMutUnordered<T::T> for SecondVec<'a, T> {
     #[inline(always)]
     fn truncate(&mut self, num: usize) {
         SecondVec::truncate(self, num);
     }
 
     #[inline(always)]
-    fn as_slice_mut(&mut self) -> &mut [T] {
+    fn as_slice_mut(&mut self) -> &mut [T::T] {
         SecondVec::as_slice_mut(self)
     }
 }
 
-impl<'a, T> core::ops::Deref for SecondVec<'a, T> {
-    type Target = [T];
+impl<'a, T: VecTrait> core::ops::Deref for SecondVec<'a, T> {
+    type Target = [T::T];
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
@@ -119,53 +122,130 @@ impl<'a, T> core::ops::Deref for SecondVec<'a, T> {
     }
 }
 
-impl<'a, T> core::ops::DerefMut for SecondVec<'a, T> {
+impl<'a, T: VecTrait> core::ops::DerefMut for SecondVec<'a, T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
     }
 }
 
-impl<'a, T> SecondVec<'a, T> {
+impl<'a, T: VecTrait> SecondVec<'a, T> {
     #[inline(always)]
-    pub fn as_slice(&self) -> &[T] {
-        &self.foo.inner[self.foo.first_length..]
+    pub fn as_slice(&self) -> &[T::T] {
+        &self.foo.inner.borrow()[self.foo.first_length..]
     }
     #[inline(always)]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
-        &mut self.foo.inner[self.foo.first_length..]
+    pub fn as_slice_mut(&mut self) -> &mut [T::T] {
+        &mut self.foo.inner.borrow_mut()[self.foo.first_length..]
     }
 
     #[inline(always)]
-    pub fn push(&mut self, b: T) {
-        self.foo.inner.push(b);
+    pub fn push(&mut self, b: T::T) {
+        self.foo.inner.borrow_mut().push(b);
     }
 
     #[inline(always)]
     pub fn truncate(&mut self, num: usize) {
-        self.foo.inner.truncate(self.foo.first_length + num);
+        self.foo
+            .inner
+            .borrow_mut()
+            .truncate(self.foo.first_length + num);
     }
 }
 
-impl<T> From<TwoUnorderedVecs<T>> for Vec<T> {
+impl<T> From<TwoUnorderedVecs<Vec<T>>> for Vec<T> {
     #[inline(always)]
-    fn from(a: TwoUnorderedVecs<T>) -> Vec<T> {
+    fn from(a: TwoUnorderedVecs<Vec<T>>) -> Vec<T> {
         a.inner
     }
 }
+
+///
+/// Abstract over a Vec<T> and a &mut Vec<T>
+///
+pub trait VecTrait {
+    type T;
+    fn borrow_mut(&mut self) -> &mut Vec<Self::T>;
+    fn borrow(&self) -> &Vec<Self::T>;
+}
+
+impl<T> VecTrait for Vec<T> {
+    type T = T;
+    fn borrow_mut(&mut self) -> &mut Vec<Self::T> {
+        self
+    }
+    fn borrow(&self) -> &Vec<Self::T> {
+        self
+    }
+}
+
+impl<T> VecTrait for &mut Vec<T> {
+    type T = T;
+    fn borrow_mut(&mut self) -> &mut Vec<Self::T> {
+        self
+    }
+    fn borrow(&self) -> &Vec<Self::T> {
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct TwoUnorderedVecs<T> {
-    inner: Vec<T>,
+    inner: T,
     first_length: usize,
 }
 
-impl<T> Default for TwoUnorderedVecs<T>{
+impl<T> Default for TwoUnorderedVecs<Vec<T>> {
     #[inline(always)]
-    fn default()->Self{
+    fn default() -> Self {
         TwoUnorderedVecs::new()
     }
 }
-impl<T> TwoUnorderedVecs<T> {
+
+impl<T: VecTrait> TwoUnorderedVecs<T> {
+    #[inline(always)]
+    pub fn first(&mut self) -> FirstVec<T> {
+        FirstVec { foo: self }
+    }
+
+    #[inline(always)]
+    pub fn second(&mut self) -> SecondVec<T> {
+        SecondVec { foo: self }
+    }
+
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        self.first_length = 0;
+        self.inner.borrow_mut().clear();
+    }
+
+    #[inline(always)]
+    pub fn as_vec(&self) -> &Vec<T::T> {
+        self.inner.borrow()
+    }
+
+    #[inline(always)]
+    pub fn as_slice_mut(&mut self) -> (&mut [T::T], &mut [T::T]) {
+        self.inner.borrow_mut().split_at_mut(self.first_length)
+    }
+
+    #[inline(always)]
+    pub fn as_slice(&self) -> (&[T::T], &[T::T]) {
+        self.inner.borrow().split_at(self.first_length)
+    }
+}
+
+impl<'a, T> TwoUnorderedVecs<&'a mut Vec<T>> {
+    pub fn from_mut(inner: &'a mut Vec<T>) -> TwoUnorderedVecs<&'a mut Vec<T>> {
+        assert!(inner.is_empty());
+        TwoUnorderedVecs {
+            inner,
+            first_length: 0,
+        }
+    }
+}
+
+impl<T> TwoUnorderedVecs<Vec<T>> {
     #[inline(always)]
     pub fn with_capacity(num: usize) -> Self {
         TwoUnorderedVecs {
@@ -194,22 +274,6 @@ impl<T> TwoUnorderedVecs<T> {
     }
 
     #[inline(always)]
-    pub fn first(&mut self) -> FirstVec<T> {
-        FirstVec { foo: self }
-    }
-
-    #[inline(always)]
-    pub fn second(&mut self) -> SecondVec<T> {
-        SecondVec { foo: self }
-    }
-
-    #[inline(always)]
-    pub fn clear(&mut self) {
-        self.first_length = 0;
-        self.inner.clear();
-    }
-
-    #[inline(always)]
     pub fn into_vec(self) -> Vec<T> {
         self.inner
     }
@@ -226,30 +290,15 @@ impl<T> TwoUnorderedVecs<T> {
         (a, curr_len)
     }
 
-    #[inline(always)]
-    pub fn as_vec(&self) -> &Vec<T> {
-        &self.inner
-    }
-
-    #[inline(always)]
-    pub fn as_slice_mut(&mut self) -> (&mut [T], &mut [T]) {
-        self.inner.split_at_mut(self.first_length)
-    }
-
-    #[inline(always)]
-    pub fn as_slice(&self) -> (&[T], &[T]) {
-        self.inner.split_at(self.first_length)
-    }
-
     ///Cast this container into another provided `X` has the same
     ///size and alignment as `T`. Panics if they do not.
     ///
     /// ### Unsafety
     ///
     /// The destructors of T won't get called, and X may
-    /// not be properly initialized. 
+    /// not be properly initialized.
     ///
-    pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<X> {
+    pub unsafe fn convert<X>(mut self) -> TwoUnorderedVecs<Vec<X>> {
         assert_eq!(core::mem::size_of::<X>(), core::mem::size_of::<T>());
         assert_eq!(core::mem::align_of::<X>(), core::mem::align_of::<T>());
 
@@ -344,6 +393,40 @@ mod test {
             assert_eq!(*a, 7);
         }
     }
+
+    #[test]
+    fn test_x_borrowed() {
+        let mut backed_vec = Vec::new();
+        let mut k = TwoUnorderedVecs::from_mut(&mut backed_vec);
+        for _ in 0u64..1000 {
+            k.second().push(4);
+        }
+        for _ in 0u64..1000 {
+            k.first().push(10);
+        }
+
+        let mut flip = false;
+        k.first().retain_mut_unordered(|a| {
+            *a += 3;
+            flip = !flip;
+            flip
+        });
+        flip = false;
+        k.second().retain_mut_unordered(|a| {
+            *a += 3;
+            flip = !flip;
+            flip
+        });
+        assert_eq!(k.first().len(), 500);
+        assert_eq!(k.second().len(), 500);
+        for a in k.first().iter() {
+            assert_eq!(*a, 13);
+        }
+        for a in k.second().iter() {
+            assert_eq!(*a, 7);
+        }
+    }
+
     #[test]
     fn test_foo() {
         let mut k = TwoUnorderedVecs::new();
@@ -367,7 +450,7 @@ mod test {
 
     #[test]
     fn test_truncate_zero() {
-        let mut k: TwoUnorderedVecs<u32> = TwoUnorderedVecs::new();
+        let mut k: TwoUnorderedVecs<Vec<u32>> = TwoUnorderedVecs::new();
 
         k.first().push(5);
         k.first().push(5);
